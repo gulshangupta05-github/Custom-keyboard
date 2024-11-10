@@ -2,12 +2,16 @@ package com.app.jayesh.customkeyboard
 
 
 import android.app.Service;
+import android.content.Context
 import android.content.Intent;
+import android.content.SharedPreferences
 import android.inputmethodservice.InputMethodService;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.media.AudioManager;
 import android.os.IBinder;
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import android.view.KeyEvent;
 import android.view.KeyboardShortcutGroup
@@ -21,7 +25,16 @@ class GlassKeyKeyboard : InputMethodService(), KeyboardView.OnKeyboardActionList
 
     private var isCaps = false
     private var isSpecial = false;
+    private lateinit var vibrator: Vibrator
+    private lateinit var sharedPreferences: SharedPreferences
 
+
+    override fun onCreate() {
+        super.onCreate()
+        // Initialize vibrator and SharedPreferences
+        vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        sharedPreferences = getSharedPreferences("keyboardPrefs", MODE_PRIVATE)
+    }
     override fun onCreateInputView(): View {
         kv = layoutInflater.inflate(R.layout.keyboard, null) as KeyboardView
         keyboard = Keyboard(this, R.xml.qwerty)
@@ -46,6 +59,11 @@ class GlassKeyKeyboard : InputMethodService(), KeyboardView.OnKeyboardActionList
     override fun onKey(i: Int, ints: IntArray) {
         val ic: InputConnection = currentInputConnection
         playClick(i)
+
+        // Check if vibration is enabled
+        if (sharedPreferences.getBoolean("isVibrationEnabled", false)) {
+            vibrate()
+        }
         when (i) {
             Keyboard.KEYCODE_DELETE -> ic.deleteSurroundingText(1, 0)
             Keyboard.KEYCODE_SHIFT -> {
@@ -81,7 +99,14 @@ class GlassKeyKeyboard : InputMethodService(), KeyboardView.OnKeyboardActionList
             }
         }
     }
-
+    private fun vibrate() {
+        // For API 26 and above, use VibrationEffect
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            vibrator.vibrate(50) // Vibrate for 50 milliseconds for older devices
+        }
+    }
     private fun playClick(i: Int) {
         val am: AudioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         when (i) {
